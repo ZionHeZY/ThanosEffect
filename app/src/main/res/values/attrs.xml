@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="ThanosDisintegrationView">
+        <attr name="gridRows" format="integer" />
+        <attr name="gridCols" format="integer" />
+        <attr name="durationMillis" format="integer" />
+        <attr name="gapPx" format="dimension" />
+    </declare-styleable>
+</resources> 

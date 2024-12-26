@@ -1,53 +1,72 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#F5F5F5"
     android:gravity="center"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:orientation="vertical">
 
     <tech.hezy.thanoseffect.ThanosDisintegrationView
         android:id="@+id/thanosContainer"
-        android:layout_width="500dp"
-        android:layout_height="300dp"
-        android:layout_marginBottom="24dp"
-        >
+        android:layout_width="match_parent"
+        android:layout_height="400dp"
+        android:layout_marginBottom="32dp">
 
         <LinearLayout
-            android:layout_width="200dp"
-            android:layout_height="100dp"
-            android:background="#E40C0C"
+            android:layout_width="300dp"
+            android:layout_height="200dp"
+            android:background="@drawable/content_background"
+            android:elevation="4dp"
             android:gravity="center"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <ImageView
+                android:background="@drawable/ic_launcher_background"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_launcher_foreground" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Test!!"
+                android:text="Test！！！"
                 android:textColor="@color/black"
-                android:textSize="20sp"
+                android:layout_marginTop="5dp"
+                android:textSize="24sp"
                 android:textStyle="bold" />
+
+
         </LinearLayout>
     </tech.hezy.thanoseffect.ThanosDisintegrationView>
 
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:spacing="16dp">
 
         <Button
             android:id="@+id/startButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="16dp"
-            android:text="Snap!" />
+            android:backgroundTint="#7C4DFF"
+            android:paddingHorizontal="32dp"
+            android:paddingVertical="12dp"
+            android:text="Snap!"
+            android:textSize="18sp" />
 
         <Button
             android:id="@+id/resetButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Reset" />
+            android:backgroundTint="#FF5722"
+            android:paddingHorizontal="32dp"
+            android:paddingVertical="12dp"
+            android:text="Reset"
+            android:textSize="18sp" />
     </LinearLayout>
-
 </LinearLayout>
 

@@ -9,6 +9,7 @@ import android.util.AttributeSet
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.LinearInterpolator
+import androidx.core.animation.doOnEnd
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -20,195 +21,215 @@ class ThanosDisintegrationView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : ViewGroup(context, attrs, defStyleAttr) {
 
-    private var gridRows: Int = 10
-    private var gridCols: Int = 20
-    private var durationMillis: Long = 3000
-    private var enableFadeOut: Boolean = true
-    private var gapPx: Int = 2
-    private var baseSpeedMin = 100f
-    private var baseSpeedMax = 400f
-    private var angleStart = -60.0
-    private var angleEnd = -30.0
-
-
-    data class Particle(
-        val bitmap: Bitmap,
-        val initX: Float,
-        val initY: Float,
-        val angleDeg: Double,
-        val speed: Float,
-        var x: Float = 0f,
-        var y: Float = 0f,
-        var alpha: Int = 255
-    )
-
-    private var sourceBitmap: Bitmap? = null
-    private var animator: ValueAnimator? = null
-    private var isDisintegrating = false
-    private val particles = mutableListOf<Particle>()
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        isFilterBitmap = true
+    companion object {
+        private const val DEFAULT_GRID_ROWS = 10
+        private const val DEFAULT_GRID_COLS = 20
+        private const val DEFAULT_DURATION = 3000L
+        private const val DEFAULT_GAP = 3
+        private const val MIN_PARTICLE_SIZE = 10
+        private const val SPLIT_DURATION = 0L
     }
 
+    private var gridRows: Int = DEFAULT_GRID_ROWS
+    private var gridCols: Int = DEFAULT_GRID_COLS
+    private var durationMillis: Long = DEFAULT_DURATION
+    private var gapPx: Int = DEFAULT_GAP
+    private var baseSpeedMin = 20f
+    private var baseSpeedMax = 60f
+    private var angleStart = -35.0
+    private var angleEnd = -25.0
+
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val random = Random(System.currentTimeMillis())
+    private val particles = mutableListOf<Particle>()
+    private var contentBitmap: Bitmap? = null
+    private var animator: ValueAnimator? = null
+    private var isAnimating = false
+
     init {
+        context.obtainStyledAttributes(attrs, R.styleable.ThanosDisintegrationView).apply {
+            try {
+                gridRows = getInteger(R.styleable.ThanosDisintegrationView_gridRows, DEFAULT_GRID_ROWS)
+                gridCols = getInteger(R.styleable.ThanosDisintegrationView_gridCols, DEFAULT_GRID_COLS)
+                durationMillis = getInteger(R.styleable.ThanosDisintegrationView_durationMillis, DEFAULT_DURATION.toInt()).toLong()
+                gapPx = getDimensionPixelSize(R.styleable.ThanosDisintegrationView_gapPx, DEFAULT_GAP)
+            } finally {
+                recycle()
+            }
+        }
         setWillNotDraw(false)
     }
 
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        measureChildren(widthMeasureSpec, heightMeasureSpec)
-
-        var maxWidth = 0
-        var maxHeight = 0
-
-        for (i in 0 until childCount) {
-            val child = getChildAt(i)
-            if (child.visibility != View.GONE) {
-                val cw = child.measuredWidth
-                val ch = child.measuredHeight
-                if (cw > maxWidth) maxWidth = cw
-                if (ch > maxHeight) maxHeight = ch
-            }
-        }
-        maxWidth += paddingLeft + paddingRight
-        maxHeight += paddingTop + paddingBottom
-
-        val finalWidth = resolveSize(maxWidth, widthMeasureSpec)
-        val finalHeight = resolveSize(maxHeight, heightMeasureSpec)
-        setMeasuredDimension(finalWidth, finalHeight)
-    }
-
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
-        if (childCount == 0) return
-
-        val parentW = measuredWidth
-        val parentH = measuredHeight
-
-        for (i in 0 until childCount) {
-            val child = getChildAt(i)
-            if (child.visibility == View.GONE) continue
-
-            val cw = child.measuredWidth
-            val ch = child.measuredHeight
-            val cl = (parentW - cw) / 2
-            val ct = (parentH - ch) / 2
-            child.layout(cl, ct, cl + cw, ct + ch)
+        getChildAt(0)?.let { child ->
+            val centerX = (r - l - child.measuredWidth) / 2
+            val centerY = (b - t - child.measuredHeight) / 2
+            child.layout(
+                centerX,
+                centerY,
+                centerX + child.measuredWidth,
+                centerY + child.measuredHeight
+            )
         }
     }
 
-
-    override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
-        if (!isDisintegrating) return
-        for (p in particles) {
-            paint.alpha = p.alpha
-            canvas.drawBitmap(p.bitmap, p.x, p.y, paint)
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        getChildAt(0)?.let { child ->
+            measureChild(child, widthMeasureSpec, heightMeasureSpec)
         }
+        setMeasuredDimension(
+            resolveSize(suggestedMinimumWidth, widthMeasureSpec),
+            resolveSize(suggestedMinimumHeight, heightMeasureSpec)
+        )
     }
-
 
     fun startDisintegration() {
-        if (childCount == 0 || isDisintegrating) return
-
-        val child = getChildAt(0) ?: return
-        sourceBitmap = createBitmapFromView(child)
-
-        setupParticles()
-
-        child.visibility = View.INVISIBLE
-
-        animator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = durationMillis
-            interpolator = LinearInterpolator()
-            addUpdateListener {
-                val fraction = it.animatedFraction
-                updateParticles(fraction)
-                invalidate()
-            }
-            start()
+        if (isAnimating || childCount == 0) return
+        isAnimating = true
+        
+        getChildAt(0)?.let { child ->
+            child.visibility = View.INVISIBLE
+            contentBitmap = child.drawToBitmap()
+            initParticles()
+            startAnimation()
         }
-        isDisintegrating = true
     }
 
     fun reset() {
         animator?.cancel()
-        animator = null
-        isDisintegrating = false
+        isAnimating = false
         particles.clear()
-        sourceBitmap?.recycle()
-        sourceBitmap = null
-
-        if (childCount > 0) {
-            getChildAt(0)?.visibility = View.VISIBLE
-        }
+        contentBitmap?.recycle()
+        contentBitmap = null
+        getChildAt(0)?.visibility = View.VISIBLE
         invalidate()
     }
 
-    private fun createBitmapFromView(view: View): Bitmap {
-        val w = view.width
-        val h = view.height
-        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val c = Canvas(bmp)
-        view.draw(c)
-        return bmp
-    }
-
-    private fun setupParticles() {
-        if (sourceBitmap == null) return
+    private fun initParticles() {
         particles.clear()
-
         val child = getChildAt(0) ?: return
-        val offsetX = child.left
-        val offsetY = child.top
+        val bitmap = contentBitmap ?: return
 
-        val bmp = sourceBitmap!!
-        val pieceW = bmp.width / gridCols
-        val pieceH = bmp.height / gridRows
+        val viewWidth = child.width
+        val viewHeight = child.height
+        val startX = child.left
+        val startY = child.top
+
+        val baseParticleWidth = (viewWidth / gridCols.toFloat()).roundToInt()
+        val baseParticleHeight = (viewHeight / gridRows.toFloat()).roundToInt()
+
+        if (baseParticleWidth < MIN_PARTICLE_SIZE || baseParticleHeight < MIN_PARTICLE_SIZE) {
+            val newCols = viewWidth / MIN_PARTICLE_SIZE
+            val newRows = viewHeight / MIN_PARTICLE_SIZE
+            gridCols = newCols.coerceAtMost(DEFAULT_GRID_COLS)
+            gridRows = newRows.coerceAtMost(DEFAULT_GRID_ROWS)
+        }
 
         for (row in 0 until gridRows) {
             for (col in 0 until gridCols) {
-                val srcLeft = col * pieceW
-                val srcTop = row * pieceH
-                val actualW = if (col == gridCols - 1) bmp.width - srcLeft else pieceW
-                val actualH = if (row == gridRows - 1) bmp.height - srcTop else pieceH
+                val randomWidthFactor = 0.7f + random.nextFloat() * 0.6f
+                val randomHeightFactor = 0.7f + random.nextFloat() * 0.6f
+                
+                val particleWidth = (baseParticleWidth * randomWidthFactor).roundToInt()
+                val particleHeight = (baseParticleHeight * randomHeightFactor).roundToInt()
 
-                val pieceBitmap = Bitmap.createBitmap(bmp, srcLeft, srcTop, actualW, actualH)
-
-                val initX = offsetX + col * (pieceW + gapPx)
-                val initY = offsetY + row * (pieceH + gapPx)
-
-                val angleDeg = angleStart + (angleEnd - angleStart) * Random.nextDouble()
-                val speed = Random.nextFloat() * (baseSpeedMax - baseSpeedMin) + baseSpeedMin
-
-                val p = Particle(
-                    bitmap = pieceBitmap,
-                    initX = initX.toFloat(),
-                    initY = initY.toFloat(),
-                    angleDeg = angleDeg,
-                    speed = speed,
-                    x = initX.toFloat(),
-                    y = initY.toFloat(),
-                    alpha = 255
-                )
-                particles.add(p)
+                val offsetX = random.nextFloat() * baseParticleWidth * 0.2f
+                val offsetY = random.nextFloat() * baseParticleHeight * 0.2f
+                
+                val x = startX + col * baseParticleWidth + offsetX
+                val y = startY + row * baseParticleHeight + offsetY
+                
+                if (x + particleWidth <= startX + viewWidth && 
+                    y + particleHeight <= startY + viewHeight) {
+                    particles.add(
+                        Particle(
+                            x = x,
+                            y = y,
+                            width = particleWidth - gapPx,
+                            height = particleHeight - gapPx,
+                            bitmap = bitmap,
+                            speed = random.nextFloat() * (baseSpeedMax - baseSpeedMin) + baseSpeedMin,
+                            angle = random.nextDouble() * (angleEnd - angleStart) + angleStart,
+                            srcX = x.roundToInt() - startX,
+                            srcY = y.roundToInt() - startY
+                        )
+                    )
+                }
             }
         }
     }
 
-    private fun updateParticles(fraction: Float) {
-        for (p in particles) {
-            val distance = p.speed * fraction
-
-            val rad = Math.toRadians(p.angleDeg)
-            val dx = distance * cos(rad)
-            val dy = distance * sin(rad)
-
-            p.x = p.initX + dx.toFloat()
-            p.y = p.initY + dy.toFloat()
-
-            if (enableFadeOut) {
-                p.alpha = (255 * (1 - fraction)).roundToInt().coerceIn(0, 255)
+    private fun startAnimation() {
+        animator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = durationMillis
+            interpolator = LinearInterpolator()
+            
+            addUpdateListener { animation ->
+                particles.forEach { particle ->
+                    particle.update(animation.animatedFraction)
+                }
+                invalidate()
             }
+            
+            doOnEnd {
+                isAnimating = false
+                particles.clear()
+                contentBitmap?.recycle()
+                contentBitmap = null
+            }
+            
+            start()
         }
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        if (!isAnimating) {
+            super.onDraw(canvas)
+            return
+        }
+
+        particles.forEach { particle ->
+            particle.draw(canvas, paint)
+        }
+    }
+
+    private data class Particle(
+        var x: Float,
+        var y: Float,
+        val width: Int,
+        val height: Int,
+        val bitmap: Bitmap,
+        val speed: Float,
+        val angle: Double,
+        val srcX: Int,
+        val srcY: Int,
+        var alpha: Int = 255
+    ) {
+        fun update(progress: Float) {
+            val moveProgress = progress * progress
+            val distance = speed * moveProgress
+            x += (distance * cos(Math.toRadians(angle))).toFloat()
+            y += (distance * sin(Math.toRadians(angle))).toFloat()
+            
+            alpha = ((1f - progress) * 255).roundToInt().coerceIn(0, 255)
+        }
+
+        fun draw(canvas: Canvas, paint: Paint) {
+            paint.alpha = alpha
+            canvas.drawBitmap(
+                bitmap,
+                android.graphics.Rect(srcX, srcY, srcX + width, srcY + height),
+                android.graphics.RectF(x, y, x + width, y + height),
+                paint
+            )
+        }
+    }
+
+    private fun View.drawToBitmap(): Bitmap {
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        draw(canvas)
+        return bitmap
     }
 }
 
