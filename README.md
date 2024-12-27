@@ -4,6 +4,8 @@
 
 [English Version](README_EN.md)
 
+![演示](demo.gif)
+
 ## 特性
 
 - 从左到右的渐进式粒子化效果

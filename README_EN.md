@@ -4,6 +4,7 @@ An Android custom view that implements a particle disintegration effect, elegant
 
 [中文版](README.md)
 
+![Demo](demo.gif)
 ## Features
 
 - Progressive particle effect from left to right
