@@ -52,8 +52,10 @@ class MainActivity : AppCompatActivity() {
 效果可以通过以下参数自定义：
 - 网格大小：控制粒子数量（DEFAULT_GRID_ROWS = 10, DEFAULT_GRID_COLS = 20）
 - 动画时长：控制动画持续时间（DEFAULT_DURATION = 3000L）
-- 粒子速度：控制粒子移动速度（baseSpeedMin = 20f, baseSpeedMax = 60f）
-- 移动角度：控制粒子移动方向（angleStart = -35.0, angleEnd = -25.0）
+- 粒子速度：控制粒子移动速度（baseSpeedMin = 10f, baseSpeedMax = 50f）
+- 移动角度：控制粒子移动方向（angleStart = -60.0, angleEnd = -30.0）
+- 粒子大小：粒子的不规则程度（randomWidthFactor = 0.7f ~ 1.3f）
+- 位置偏移：粒子的随机偏移量（offsetX最大40%, offsetY最大20%）
 
 ## 效果展示
 ![演示](demo.gif)

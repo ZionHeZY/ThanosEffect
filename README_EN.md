@@ -49,8 +49,10 @@ class MainActivity : AppCompatActivity() {
 The effect can be customized through several parameters:
 - Grid size: Controls the number of particles (DEFAULT_GRID_ROWS = 10, DEFAULT_GRID_COLS = 20)
 - Animation duration: Length of the animation (DEFAULT_DURATION = 3000L)
-- Particle speed: Controls how fast particles move (baseSpeedMin = 20f, baseSpeedMax = 60f)
-- Movement angle: Direction of particle movement (angleStart = -35.0, angleEnd = -25.0)
+- Particle speed: Controls how fast particles move (baseSpeedMin = 10f, baseSpeedMax = 50f)
+- Movement angle: Direction of particle movement (angleStart = -60.0, angleEnd = -30.0)
+- Particle size: Irregularity of particles (randomWidthFactor = 0.7f ~ 1.3f)
+- Position offset: Random offset of particles (offsetX up to 40%, offsetY up to 20%)
 
 ## Demo
 ![Demo](demo.gif)
