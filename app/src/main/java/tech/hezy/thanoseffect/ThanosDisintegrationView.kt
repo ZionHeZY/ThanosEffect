@@ -30,16 +30,14 @@ class ThanosDisintegrationView @JvmOverloads constructor(
         private const val DEFAULT_DURATION = 3000L
         private const val DEFAULT_GAP = 3
         private const val MIN_PARTICLE_SIZE = 10
-        private const val MAX_DELAY_FACTOR = 0.5f
-        private const val SPLIT_TRANSITION_WIDTH = 150f
     }
 
     private var gridRows: Int = DEFAULT_GRID_ROWS
     private var gridCols: Int = DEFAULT_GRID_COLS
     private var durationMillis: Long = DEFAULT_DURATION
     private var gapPx: Int = DEFAULT_GAP
-    private var baseSpeedMin = 10f
-    private var baseSpeedMax = 50f
+    private var baseSpeedMin = 5f
+    private var baseSpeedMax = 25f
     private var angleStart = -60.0
     private var angleEnd = -30.0
 
@@ -49,12 +47,12 @@ class ThanosDisintegrationView @JvmOverloads constructor(
     private var contentBitmap: Bitmap? = null
     private var animator: ValueAnimator? = null
     private var isAnimating = false
-    private var maskProgress = 0f
-    private val maskPaint = Paint().apply {
+    private val originalPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
     }
-    private var splitProgress = 0f
-    private val originalPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val clearPaint = Paint().apply {
+        xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
+    }
 
     init {
         context.obtainStyledAttributes(attrs, R.styleable.ThanosDisintegrationView).apply {
@@ -95,13 +93,34 @@ class ThanosDisintegrationView @JvmOverloads constructor(
 
     fun startDisintegration() {
         if (isAnimating || childCount == 0) return
-        isAnimating = true
         
         getChildAt(0)?.let { child ->
             child.visibility = View.INVISIBLE
             contentBitmap = child.drawToBitmap()
             initParticles()
-            startAnimation()
+            
+            animator = ValueAnimator.ofFloat(0f, 1f).apply {
+                duration = durationMillis
+                interpolator = LinearInterpolator()
+                
+                addUpdateListener { animation ->
+                    val progress = animation.animatedFraction
+                    particles.forEach { particle ->
+                        particle.update(progress)
+                    }
+                    invalidate()
+                }
+                
+                doOnEnd {
+                    isAnimating = false
+                    particles.clear()
+                    contentBitmap?.recycle()
+                    contentBitmap = null
+                }
+            }
+            
+            isAnimating = true
+            animator?.start()
         }
     }
 
@@ -151,9 +170,6 @@ class ThanosDisintegrationView @JvmOverloads constructor(
                 
                 if (x + particleWidth <= startX + viewWidth && 
                     y + particleHeight <= startY + viewHeight) {
-                    val normalizedX = col.toFloat() / gridCols
-                    val startDelay = normalizedX * 0.3f
-                    
                     particles.add(
                         Particle(
                             x = x,
@@ -164,47 +180,12 @@ class ThanosDisintegrationView @JvmOverloads constructor(
                             speed = random.nextFloat() * (baseSpeedMax - baseSpeedMin) + baseSpeedMin,
                             angle = random.nextDouble() * (angleEnd - angleStart) + angleStart,
                             srcX = x.roundToInt() - startX,
-                            srcY = y.roundToInt() - startY,
-                            startDelay = startDelay
+                            srcY = y.roundToInt() - startY
                         )
                     )
                 }
             }
         }
-    }
-
-    private fun startAnimation() {
-        val splitAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = durationMillis * 2 / 3
-            interpolator = LinearInterpolator()
-            
-            addUpdateListener { animation ->
-                splitProgress = animation.animatedValue as Float
-                invalidate()
-            }
-        }
-
-        animator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = durationMillis
-            interpolator = LinearInterpolator()
-            
-            addUpdateListener { animation ->
-                particles.forEach { particle ->
-                    particle.update(animation.animatedFraction, splitProgress)
-                }
-                invalidate()
-            }
-            
-            doOnEnd {
-                isAnimating = false
-                particles.clear()
-                contentBitmap?.recycle()
-                contentBitmap = null
-            }
-        }
-
-        splitAnimator.start()
-        animator?.start()
     }
 
     @SuppressLint("DrawAllocation")
@@ -216,52 +197,52 @@ class ThanosDisintegrationView @JvmOverloads constructor(
 
         val child = getChildAt(0) ?: return
         val bitmap = contentBitmap ?: return
+        val progress = animator?.animatedFraction ?: 0f
 
-        val splitX = child.left + (child.width * splitProgress)
-        val transitionStart = splitX - SPLIT_TRANSITION_WIDTH
+        val layerBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val layerCanvas = Canvas(layerBitmap)
 
-        particles.forEach { particle ->
-            if (particle.x <= splitX) {
-                val alpha = when {
-                    particle.x <= transitionStart -> 255
-                    particle.x >= splitX -> 0
-                    else -> {
-                        ((splitX - particle.x) / SPLIT_TRANSITION_WIDTH * 255).toInt()
-                    }
-                }
-                particle.draw(canvas, paint, alpha)
-            }
-        }
+        layerCanvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), clearPaint)
 
-        if (splitProgress < 1f) {
-            canvas.save()
+        layerCanvas.drawBitmap(
+            bitmap,
+            child.left.toFloat(),
+            child.top.toFloat(),
+            Paint()
+        )
 
-            val shader = android.graphics.LinearGradient(
-                transitionStart, 0f,
-                splitX, 0f,
-                0x00FFFFFF,
-                0xFFFFFFFF.toInt(),
+        val maskBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val maskCanvas = Canvas(maskBitmap)
+
+        val maskDelay = 0.15f
+        val adjustedProgress = ((progress - maskDelay) / (1 - maskDelay)).coerceIn(0f, 1f)
+        
+        val fadeWidth = width * 0.3f
+        val fadeStart = width * adjustedProgress - fadeWidth
+        val paint = Paint().apply {
+            shader = android.graphics.LinearGradient(
+                fadeStart, 0f,
+                fadeStart + fadeWidth, 0f,
+                intArrayOf(
+                    0x00FFFFFF,
+                    0x66FFFFFF,
+                    0xFFFFFFFF.toInt()
+                ),
+                floatArrayOf(0f, 0.4f, 1f),
                 android.graphics.Shader.TileMode.CLAMP
             )
-            originalPaint.shader = shader
-
-            canvas.clipRect(
-                splitX,
-                child.top.toFloat(),
-                child.right.toFloat(),
-                child.bottom.toFloat()
-            )
-
-            canvas.drawBitmap(
-                bitmap,
-                child.left.toFloat(),
-                child.top.toFloat(),
-                originalPaint
-            )
-            
-            originalPaint.shader = null
-            canvas.restore()
         }
+        maskCanvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
+
+        layerCanvas.drawBitmap(maskBitmap, 0f, 0f, originalPaint)
+        maskBitmap.recycle()
+
+        particles.forEach { particle ->
+            particle.draw(layerCanvas, this.paint)
+        }
+
+        canvas.drawBitmap(layerBitmap, 0f, 0f, Paint())
+        layerBitmap.recycle()
     }
 
     private data class Particle(
@@ -274,42 +255,57 @@ class ThanosDisintegrationView @JvmOverloads constructor(
         val angle: Double,
         val srcX: Int,
         val srcY: Int,
-        var alpha: Int = 255,
-        val startDelay: Float
+        var alpha: Int = 0
     ) {
-        private var isActivated = false
+        var isActivated = false
         private var activationTime = 0f
+        private val activationThreshold = (srcX.toFloat() / bitmap.width.toFloat()) - 0.02f
 
-        fun update(progress: Float, splitProgress: Float) {
-            val splitX = bitmap.width * splitProgress
-
-            if (!isActivated && srcX <= splitX) {
+        fun update(progress: Float) {
+            val splitDelay = 0.15f
+            
+            if (!isActivated && progress >= activationThreshold) {
                 isActivated = true
                 activationTime = progress
             }
 
             if (!isActivated) {
-                alpha = 255
+                alpha = 0
                 return
             }
 
-            val particleProgress = ((progress - activationTime) / (1 - activationTime)).coerceIn(0f, 1f)
-            val moveProgress = particleProgress * particleProgress
-            val distance = speed * moveProgress
+            val particleProgress = ((progress - activationTime) / (1 - activationThreshold)).coerceIn(0f, 1f)
+
+            if (particleProgress <= splitDelay) {
+                alpha = ((particleProgress / splitDelay) * 255).roundToInt().coerceIn(0, 255)
+                return
+            }
+
+            val moveProgress = ((particleProgress - splitDelay) / (1 - splitDelay)).coerceIn(0f, 1f)
+            val cubicProgress = moveProgress * moveProgress * moveProgress
+
+            val distance = speed * cubicProgress
             x += (distance * cos(Math.toRadians(angle))).toFloat()
             y += (distance * sin(Math.toRadians(angle))).toFloat()
-            
-            alpha = ((1f - moveProgress) * 255).roundToInt().coerceIn(0, 255)
+
+            val fadeStartProgress = 0.5f
+            if (moveProgress > fadeStartProgress) {
+                val fadeProgress = ((moveProgress - fadeStartProgress) / (1 - fadeStartProgress))
+                val smoothFadeProgress = kotlin.math.sqrt(fadeProgress.toDouble()).toFloat()
+                alpha = ((1f - smoothFadeProgress) * 255).roundToInt().coerceIn(0, 255)
+            }
         }
 
-        fun draw(canvas: Canvas, paint: Paint, splitAlpha: Int = 255) {
-            paint.alpha = (alpha * splitAlpha / 255f).toInt().coerceIn(0, 255)
-            canvas.drawBitmap(
-                bitmap,
-                android.graphics.Rect(srcX, srcY, srcX + width, srcY + height),
-                android.graphics.RectF(x, y, x + width, y + height),
-                paint
-            )
+        fun draw(canvas: Canvas, paint: Paint) {
+            if (alpha > 0) {
+                paint.alpha = alpha
+                canvas.drawBitmap(
+                    bitmap,
+                    android.graphics.Rect(srcX, srcY, srcX + width, srcY + height),
+                    android.graphics.RectF(x, y, x + width, y + height),
+                    paint
+                )
+            }
         }
     }
 
