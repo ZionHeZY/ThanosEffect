@@ -27,7 +27,7 @@ class ThanosDisintegrationView @JvmOverloads constructor(
     companion object {
         private const val DEFAULT_GRID_ROWS = 10
         private const val DEFAULT_GRID_COLS = 20
-        private const val DEFAULT_DURATION = 3000L
+        private const val DEFAULT_DURATION = 2000L
         private const val DEFAULT_GAP = 3
         private const val MIN_PARTICLE_SIZE = 10
     }
@@ -72,12 +72,7 @@ class ThanosDisintegrationView @JvmOverloads constructor(
         getChildAt(0)?.let { child ->
             val centerX = (r - l - child.measuredWidth) / 2
             val centerY = (b - t - child.measuredHeight) / 2
-            child.layout(
-                centerX,
-                centerY,
-                centerX + child.measuredWidth,
-                centerY + child.measuredHeight
-            )
+            child.layout(centerX, centerY, centerX + child.measuredWidth, centerY + child.measuredHeight)
         }
     }
 
@@ -102,15 +97,11 @@ class ThanosDisintegrationView @JvmOverloads constructor(
             animator = ValueAnimator.ofFloat(0f, 1f).apply {
                 duration = durationMillis
                 interpolator = LinearInterpolator()
-                
                 addUpdateListener { animation ->
                     val progress = animation.animatedFraction
-                    particles.forEach { particle ->
-                        particle.update(progress)
-                    }
+                    particles.forEach { particle -> particle.update(progress) }
                     invalidate()
                 }
-                
                 doOnEnd {
                     isAnimating = false
                     particles.clear()
@@ -118,7 +109,6 @@ class ThanosDisintegrationView @JvmOverloads constructor(
                     contentBitmap = null
                 }
             }
-            
             isAnimating = true
             animator?.start()
         }
@@ -158,31 +148,25 @@ class ThanosDisintegrationView @JvmOverloads constructor(
             for (col in 0 until gridCols) {
                 val randomWidthFactor = 0.7f + random.nextFloat() * 0.6f
                 val randomHeightFactor = 0.7f + random.nextFloat() * 0.6f
-                
                 val particleWidth = (baseParticleWidth * randomWidthFactor).roundToInt()
                 val particleHeight = (baseParticleHeight * randomHeightFactor).roundToInt()
-
                 val offsetX = random.nextFloat() * baseParticleWidth * 0.4f
                 val offsetY = random.nextFloat() * baseParticleHeight * 0.2f
-                
                 val x = startX + col * baseParticleWidth + offsetX
                 val y = startY + row * baseParticleHeight + offsetY
                 
-                if (x + particleWidth <= startX + viewWidth && 
-                    y + particleHeight <= startY + viewHeight) {
-                    particles.add(
-                        Particle(
-                            x = x,
-                            y = y,
-                            width = particleWidth - gapPx,
-                            height = particleHeight - gapPx,
-                            bitmap = bitmap,
-                            speed = random.nextFloat() * (baseSpeedMax - baseSpeedMin) + baseSpeedMin,
-                            angle = random.nextDouble() * (angleEnd - angleStart) + angleStart,
-                            srcX = x.roundToInt() - startX,
-                            srcY = y.roundToInt() - startY
-                        )
-                    )
+                if (x + particleWidth <= startX + viewWidth && y + particleHeight <= startY + viewHeight) {
+                    particles.add(Particle(
+                        x = x,
+                        y = y,
+                        width = particleWidth - gapPx,
+                        height = particleHeight - gapPx,
+                        bitmap = bitmap,
+                        speed = random.nextFloat() * (baseSpeedMax - baseSpeedMin) + baseSpeedMin,
+                        angle = random.nextDouble() * (angleEnd - angleStart) + angleStart,
+                        srcX = x.roundToInt() - startX,
+                        srcY = y.roundToInt() - startY
+                    ))
                 }
             }
         }
@@ -201,46 +185,29 @@ class ThanosDisintegrationView @JvmOverloads constructor(
 
         val layerBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val layerCanvas = Canvas(layerBitmap)
-
         layerCanvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), clearPaint)
-
-        layerCanvas.drawBitmap(
-            bitmap,
-            child.left.toFloat(),
-            child.top.toFloat(),
-            Paint()
-        )
+        layerCanvas.drawBitmap(bitmap, child.left.toFloat(), child.top.toFloat(), Paint())
 
         val maskBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val maskCanvas = Canvas(maskBitmap)
-
         val maskDelay = 0.15f
         val adjustedProgress = ((progress - maskDelay) / (1 - maskDelay)).coerceIn(0f, 1f)
-        
         val fadeWidth = width * 0.3f
         val fadeStart = width * adjustedProgress - fadeWidth
         val paint = Paint().apply {
             shader = android.graphics.LinearGradient(
                 fadeStart, 0f,
                 fadeStart + fadeWidth, 0f,
-                intArrayOf(
-                    0x00FFFFFF,
-                    0x66FFFFFF,
-                    0xFFFFFFFF.toInt()
-                ),
+                intArrayOf(0x00FFFFFF, 0x66FFFFFF, 0xFFFFFFFF.toInt()),
                 floatArrayOf(0f, 0.4f, 1f),
                 android.graphics.Shader.TileMode.CLAMP
             )
         }
         maskCanvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
-
         layerCanvas.drawBitmap(maskBitmap, 0f, 0f, originalPaint)
         maskBitmap.recycle()
 
-        particles.forEach { particle ->
-            particle.draw(layerCanvas, this.paint)
-        }
-
+        particles.forEach { particle -> particle.draw(layerCanvas, this.paint) }
         canvas.drawBitmap(layerBitmap, 0f, 0f, Paint())
         layerBitmap.recycle()
     }
@@ -283,7 +250,6 @@ class ThanosDisintegrationView @JvmOverloads constructor(
 
             val moveProgress = ((particleProgress - splitDelay) / (1 - splitDelay)).coerceIn(0f, 1f)
             val cubicProgress = moveProgress * moveProgress * moveProgress
-
             val distance = speed * cubicProgress
             x += (distance * cos(Math.toRadians(angle))).toFloat()
             y += (distance * sin(Math.toRadians(angle))).toFloat()

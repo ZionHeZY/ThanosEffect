@@ -1,61 +1,90 @@
 # ThanosEffect
 
-一个Android自定义视图，实现了"消散"效果。当触发时，目标视图会分解成粒子并逐渐飘散消失，创造出戏剧性的消失效果。
+一个实现粒子消散效果的 Android 自定义视图，可以让目标视图优雅地分解成粒子并逐渐消失。
 
 [English Version](README_EN.md)
 
 ## 特性
-- 流畅的粒子动画
-- 不规则的粒子大小
-- 可配置的动画参数
-- 易于与任何视图集成
-- 可自定义的粒子移动和淡出效果
+
+- 从左到右的渐进式粒子化效果
+- 平滑的消散动画
+- 可自定义的粒子大小和动画参数
+- 支持任意 View 的消散效果
+- 高性能的渲染实现
+- 流畅的粒子运动轨迹
 
 ## 使用方法
 
-1. 在布局中添加 ThanosDisintegrationView：
+1. 在布局文件中使用 ThanosDisintegrationView：
+
 ```xml
 <tech.hezy.thanoseffect.ThanosDisintegrationView
-    android:id="@+id/thanosContainer"
-    android:layout_width="match_parent"
+    android:id="@+id/thanosView"
+    android:layout_width="wrap_content"
     android:layout_height="wrap_content">
     
-    <!-- 在这里放置您的内容视图 -->
-    <YourView
+    <!-- 将需要应用消散效果的 View 放在这里 -->
+    <ImageView
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
-
+        android:layout_height="wrap_content"
+        android:src="@drawable/your_image"/>
+        
 </tech.hezy.thanoseffect.ThanosDisintegrationView>
 ```
 
-2. 在 Activity 中控制效果：
-```kotlin
-class MainActivity : AppCompatActivity() {
-    private lateinit var thanosContainer: ThanosDisintegrationView
+2. 在代码中控制动画：
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-        
-        thanosContainer = findViewById(R.id.thanosContainer)
-        
-        // 开始效果
-        thanosContainer.startDisintegration()
-        
-        // 重置视图
-        thanosContainer.reset()
-    }
-}
+```kotlin
+// 开始消散动画
+thanosView.startDisintegration()
+
+// 重置视图
+thanosView.reset()
 ```
 
-## 参数说明
-效果可以通过以下参数自定义：
-- 网格大小：控制粒子数量（DEFAULT_GRID_ROWS = 10, DEFAULT_GRID_COLS = 20）
-- 动画时长：控制动画持续时间（DEFAULT_DURATION = 3000L）
-- 粒子速度：控制粒子移动速度（baseSpeedMin = 10f, baseSpeedMax = 50f）
-- 移动角度：控制粒子移动方向（angleStart = -60.0, angleEnd = -30.0）
-- 粒子大小：粒子的不规则程度（randomWidthFactor = 0.7f ~ 1.3f）
-- 位置偏移：粒子的随机偏移量（offsetX最大40%, offsetY最大20%）
+## 自定义属性
 
-## 效果展示
-![演示](demo.gif)
+```xml
+<declare-styleable name="ThanosDisintegrationView">
+    <!-- 粒子网格的行数 -->
+    <attr name="gridRows" format="integer"/>
+    <!-- 粒子网格的列数 -->
+    <attr name="gridCols" format="integer"/>
+    <!-- 动画持续时间（毫秒） -->
+    <attr name="durationMillis" format="integer"/>
+    <!-- 粒子之间的间隔（像素） -->
+    <attr name="gapPx" format="dimension"/>
+</declare-styleable>
+```
+
+## 实现细节
+
+- 使用 Canvas 和 Bitmap 进行高效绘制
+- 采用粒子系统实现消散效果
+- 支持渐变遮罩实现平滑过渡
+- 优化的内存使用和性能表现
+
+## 性能优化
+
+- 使用离屏缓存减少绘制开销
+- 智能的粒子管理系统
+- 优化的动画计算逻辑
+- 及时回收不需要的资源
+
+## 许可证
+
+```
+Copyright 2024 Hezy
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+```

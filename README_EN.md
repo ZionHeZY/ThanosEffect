@@ -1,58 +1,90 @@
-    # ThanosEffect
+# ThanosEffect
 
-An Android custom view that implement the "disintegration" effect. When triggered, it breaks the target view into particles that float away and fade out, creating a dramatic disappearing effect.
+An Android custom view that implements a particle disintegration effect, elegantly breaking down the target view into particles that gradually fade away.
+
+[中文版](README.md)
 
 ## Features
-- Smooth particle animation
-- Irregular particle sizes
-- Configurable animation parameters
-- Easy to integrate with any view
-- Customizable particle movement and fade-out effects
+
+- Progressive particle effect from left to right
+- Smooth disintegration animation
+- Customizable particle size and animation parameters
+- Supports disintegration effect for any View
+- High-performance rendering implementation
+- Smooth particle motion trajectories
 
 ## Usage
 
-1. Add ThanosDisintegrationView to your layout:
+1. Use ThanosDisintegrationView in your layout file:
+
 ```xml
 <tech.hezy.thanoseffect.ThanosDisintegrationView
-    android:id="@+id/thanosContainer"
-    android:layout_width="match_parent"
+    android:id="@+id/thanosView"
+    android:layout_width="wrap_content"
     android:layout_height="wrap_content">
     
-    <YourView
+    <!-- Place the View you want to apply the effect to here -->
+    <ImageView
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
-
+        android:layout_height="wrap_content"
+        android:src="@drawable/your_image"/>
+        
 </tech.hezy.thanoseffect.ThanosDisintegrationView>
 ```
 
-2. Control the effect in your Activity:
-```kotlin
-class MainActivity : AppCompatActivity() {
-    private lateinit var thanosContainer: ThanosDisintegrationView
+2. Control the animation in code:
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-        
-        thanosContainer = findViewById(R.id.thanosContainer)
-        
-        // Start the effect
-        thanosContainer.startDisintegration()
-        
-        // Reset the view
-        thanosContainer.reset()
-    }
-}
+```kotlin
+// Start disintegration animation
+thanosView.startDisintegration()
+
+// Reset view
+thanosView.reset()
 ```
 
-## Parameters
-The effect can be customized through several parameters:
-- Grid size: Controls the number of particles (DEFAULT_GRID_ROWS = 10, DEFAULT_GRID_COLS = 20)
-- Animation duration: Length of the animation (DEFAULT_DURATION = 3000L)
-- Particle speed: Controls how fast particles move (baseSpeedMin = 10f, baseSpeedMax = 50f)
-- Movement angle: Direction of particle movement (angleStart = -60.0, angleEnd = -30.0)
-- Particle size: Irregularity of particles (randomWidthFactor = 0.7f ~ 1.3f)
-- Position offset: Random offset of particles (offsetX up to 40%, offsetY up to 20%)
+## Custom Attributes
 
-## Demo
-![Demo](demo.gif)
+```xml
+<declare-styleable name="ThanosDisintegrationView">
+    <!-- Number of rows in particle grid -->
+    <attr name="gridRows" format="integer"/>
+    <!-- Number of columns in particle grid -->
+    <attr name="gridCols" format="integer"/>
+    <!-- Animation duration in milliseconds -->
+    <attr name="durationMillis" format="integer"/>
+    <!-- Gap between particles in pixels -->
+    <attr name="gapPx" format="dimension"/>
+</declare-styleable>
+```
+
+## Implementation Details
+
+- Efficient drawing using Canvas and Bitmap
+- Particle system for disintegration effect
+- Gradient mask for smooth transitions
+- Optimized memory usage and performance
+
+## Performance Optimizations
+
+- Off-screen caching to reduce drawing overhead
+- Smart particle management system
+- Optimized animation calculations
+- Timely resource recycling
+
+## License
+
+```
+Copyright 2024 Hezy
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+```
