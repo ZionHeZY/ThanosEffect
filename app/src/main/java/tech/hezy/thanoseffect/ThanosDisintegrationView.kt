@@ -27,17 +27,16 @@ class ThanosDisintegrationView @JvmOverloads constructor(
         private const val DEFAULT_DURATION = 3000L
         private const val DEFAULT_GAP = 3
         private const val MIN_PARTICLE_SIZE = 10
-        private const val SPLIT_DURATION = 0L
     }
 
     private var gridRows: Int = DEFAULT_GRID_ROWS
     private var gridCols: Int = DEFAULT_GRID_COLS
     private var durationMillis: Long = DEFAULT_DURATION
     private var gapPx: Int = DEFAULT_GAP
-    private var baseSpeedMin = 20f
-    private var baseSpeedMax = 60f
-    private var angleStart = -35.0
-    private var angleEnd = -25.0
+    private var baseSpeedMin = 10f
+    private var baseSpeedMax = 50f
+    private var angleStart = -60.0
+    private var angleEnd = -30.0
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val random = Random(System.currentTimeMillis())
@@ -133,7 +132,7 @@ class ThanosDisintegrationView @JvmOverloads constructor(
                 val particleWidth = (baseParticleWidth * randomWidthFactor).roundToInt()
                 val particleHeight = (baseParticleHeight * randomHeightFactor).roundToInt()
 
-                val offsetX = random.nextFloat() * baseParticleWidth * 0.2f
+                val offsetX = random.nextFloat() * baseParticleWidth * 0.4f
                 val offsetY = random.nextFloat() * baseParticleHeight * 0.2f
                 
                 val x = startX + col * baseParticleWidth + offsetX
